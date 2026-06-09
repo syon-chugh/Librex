@@ -1,6 +1,6 @@
 const LIBRARY_COLORS = ["#534AB7", "#0F6E56", "#854F0B", "#185FA5", "#993C1D", "#6B2FA0"]
 
-export default function Sidebar({ libraries, activeLibrary, onSelect, onAddClick }) {
+export default function Sidebar({ libraries, activeLibrary, onSelect, onAddClick, searchHistory, onSearchSelect }) {
   return (
     <div
       style={{
