@@ -11,12 +11,17 @@ class Source(BaseModel):
     section: str
     chunk_text: str
     chunk_type: str   # "prose" or "code"
+    confidence: float  # 0-100, based on cosine similarity
 
 class AskResponse(BaseModel):
     answer: str
     sources: list[Source]
     library: str
     chunks_used: int
+    confidence_score: int  # 0-100: (1 - avg_distance) * 100
+    original_question: str = ""
+    rewritten_question: str = ""
+    confidence: float  # average confidence of top chunks
 
 class IndexRequest(BaseModel):
     url: str

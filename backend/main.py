@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from models import AskRequest, AskResponse, Source, IndexRequest, IndexStatusResponse, LibraryInfo
 from embedder import get_library_stats, check_ollama_running
 from retriever import retrieve
-from llm import generate_answer
+from llm import generate_answer, rewrite_query
 import uuid
 import threading
 from typing import Dict
@@ -56,14 +56,15 @@ async def ask(request: AskRequest):
         # 2. Generate answer
         result = generate_answer(request.question, chunks)
         
-        # 3. Build source objects
+        # 3. Build source objects with confidence
         sources = [
             Source(
                 title=c["metadata"].get("page_title", ""),
                 url=c["metadata"].get("url", ""),
                 section=c["metadata"].get("section_heading", ""),
                 chunk_text=c["text"][:200],
-                chunk_type=c["metadata"].get("chunk_type", "prose")
+                chunk_type=c["metadata"].get("chunk_type", "prose"),
+                confidence=max(0, min(100, (1 - c.get("distance", 1.0)) * 100))
             )
             for c in chunks
         ]
@@ -72,7 +73,8 @@ async def ask(request: AskRequest):
             answer=result["answer"],
             sources=sources,
             library=request.library,
-            chunks_used=result["chunks_used"]
+            chunks_used=result["chunks_used"],
+            confidence=result["confidence"]
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
