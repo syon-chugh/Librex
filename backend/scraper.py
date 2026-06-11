@@ -7,6 +7,7 @@ def scrape_docs(root_url: str, max_pages: int = 100) -> list[dict]:
     """
     BFS crawler starting from root_url, same-domain only.
     Returns list of pages with prose and code blocks extracted.
+    Improved: Removes navigation, headers, footers before extracting content.
     """
     
     parsed_root = urlparse(root_url)
@@ -17,6 +18,15 @@ def scrape_docs(root_url: str, max_pages: int = 100) -> list[dict]:
     pages = []
     
     skip_patterns = ['#', '.pdf', '.png', '.jpg', '.gif', '/api/', '/changelog', '/blog']
+    
+    # CSS selectors for nav/header/footer elements to remove
+    REMOVE_SELECTORS = [
+        'nav', 'header', 'footer',
+        '.navbar', '.navigation', '.header', '.footer',
+        '.sidebar', '.toc', '[role="navigation"]',
+        '.breadcrumb', '.search',
+        'script', 'style', 'noscript',
+    ]
     
     while queue and len(pages) < max_pages:
         url = queue.pop(0)
@@ -55,6 +65,11 @@ def scrape_docs(root_url: str, max_pages: int = 100) -> list[dict]:
             if "|" in title:
                 title = title.split("|")[0].strip()
             
+            # IMPROVEMENT: Remove nav/header/footer elements to avoid extracting navigation text
+            for selector in REMOVE_SELECTORS:
+                for element in soup.select(selector):
+                    element.decompose()
+            
             # Find main content
             main_content = None
             for selector in ['article', 'main', '[role="main"]', 'body']:
@@ -83,19 +98,25 @@ def scrape_docs(root_url: str, max_pages: int = 100) -> list[dict]:
             # Extract prose text
             prose_text = main_content.get_text(separator='\n', strip=True)
             
+            # IMPROVEMENT: Clean up excessive whitespace and empty lines
+            lines = [line.strip() for line in prose_text.split('\n') if line.strip()]
+            prose_text = '\n'.join(lines)
+            
             # Extract section headings
             section_headings = []
             for tag in ['h2', 'h3']:
                 headings = main_content.find_all(tag)
                 section_headings.extend([h.get_text(strip=True) for h in headings])
             
-            pages.append({
-                'url': url,
-                'title': title,
-                'prose_text': prose_text,
-                'code_blocks': code_blocks,
-                'section_headings': section_headings
-            })
+            # IMPROVEMENT: Only include if content is substantial (not just nav)
+            if len(prose_text) > 300:  # Increased from default to filter nav-only pages
+                pages.append({
+                    'url': url,
+                    'title': title,
+                    'prose_text': prose_text,
+                    'code_blocks': code_blocks,
+                    'section_headings': section_headings
+                })
             
             # Extract links for BFS
             for link in soup.find_all('a', href=True):

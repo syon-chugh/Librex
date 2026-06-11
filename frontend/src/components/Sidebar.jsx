@@ -1,87 +1,60 @@
-const LIBRARY_COLORS = ["#534AB7", "#0F6E56", "#854F0B", "#185FA5", "#993C1D", "#6B2FA0"]
+const LIBRARY_COLORS = ["#FF6B35", "#0F6E56", "#854F0B", "#185FA5", "#993C1D", "#6B2FA0"]
 
-export default function Sidebar({ libraries, activeLibrary, onSelect, onAddClick, searchHistory, onSearchSelect }) {
+export default function Sidebar({ libraries, activeLibrary, onSelect, onAddClick }) {
   return (
-    <div
-      style={{
-        width: "220px",
-        backgroundColor: "#f8f9fa",
-        borderRight: "1px solid #ddd",
-        display: "flex",
-        flexDirection: "column",
-        height: "100vh",
-        padding: "16px"
-      }}
-    >
-      <h2 style={{ marginTop: 0, marginBottom: "16px", fontSize: "18px", fontWeight: "700" }}>
-        StackSage
-      </h2>
+    <div className="sidebar">
+      {/* Index Header */}
+      <div className="sidebar-header">
+        <span>Index</span>
+        <span style={{ fontSize: "var(--text-xs)", color: "var(--muted-foreground)" }}>
+          {libraries.length}
+        </span>
+      </div>
 
-      {libraries.length === 0 ? (
-        <div style={{ color: "#888", fontSize: "13px", textAlign: "center", marginTop: "40px" }}>
-          No libraries indexed yet
-        </div>
-      ) : (
-        <div style={{ flex: 1, overflowY: "auto", marginBottom: "16px" }}>
-          {libraries.map((lib, idx) => {
+      {/* Library List */}
+      <div className="library-list">
+        {libraries.length === 0 ? (
+          <div style={{ 
+            color: "var(--muted-foreground)", 
+            fontSize: "var(--text-sm)", 
+            textAlign: "center", 
+            padding: "var(--spacing-6) var(--spacing-4)",
+            fontStyle: "italic"
+          }}>
+            No libraries yet
+          </div>
+        ) : (
+          libraries.map((lib, idx) => {
             const color = LIBRARY_COLORS[idx % LIBRARY_COLORS.length]
             const isActive = activeLibrary === lib.name
+            const number = String(idx + 1).padStart(2, '0')
 
             return (
-              <div
+              <button
                 key={lib.name}
                 onClick={() => onSelect(lib.name)}
-                style={{
-                  padding: "10px 12px",
-                  marginBottom: "8px",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  backgroundColor: isActive ? "#e0e0e0" : "transparent",
-                  borderLeft: isActive ? `4px solid ${color}` : "4px solid transparent",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  transition: "all 0.2s"
-                }}
+                className={`library-item ${isActive ? 'active' : ''}`}
+                style={{ background: "transparent", border: "none", cursor: "pointer" }}
               >
+                <span className="library-number">{number}</span>
                 <div
-                  style={{
-                    width: "12px",
-                    height: "12px",
-                    borderRadius: "50%",
-                    backgroundColor: color,
-                    flexShrink: 0
-                  }}
+                  className="library-dot"
+                  style={{ background: color }}
                 />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: "600", fontSize: "14px", textTransform: "capitalize" }}>
-                    {lib.name}
-                  </div>
-                  <div style={{ fontSize: "12px", color: "#888" }}>
-                    {lib.count} chunks
-                  </div>
-                </div>
-              </div>
+                <span className="library-name">{lib.name}</span>
+                <span className="library-count">{lib.count}</span>
+              </button>
             )
-          })}
-        </div>
-      )}
+          })
+        )}
+      </div>
 
+      {/* Add Library Button */}
       <button
         onClick={onAddClick}
-        style={{
-          padding: "10px",
-          backgroundColor: "#534AB7",
-          color: "white",
-          border: "none",
-          borderRadius: "6px",
-          cursor: "pointer",
-          fontSize: "14px",
-          fontWeight: "600",
-          marginTop: "auto"
-        }}
+        className="add-library-btn"
       >
-        + Add Library
+        + Index new library
       </button>
     </div>
   )

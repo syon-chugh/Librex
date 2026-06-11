@@ -89,7 +89,40 @@ def chunk_document(text: str, metadata: dict) -> list[dict]:
             prose_chunks = process_prose(segment['content'], metadata, encoding)
             chunks.extend(prose_chunks)
     
-    return chunks
+    # Quality filter: Remove low-quality chunks (navigation, very short text, etc.)
+    filtered_chunks = []
+    for chunk in chunks:
+        text = chunk['text'].strip()
+        
+        # Skip very short chunks (< 50 chars) - usually nav
+        if len(text) < 50:
+            continue
+        
+        # Skip chunks that are mostly ALL CAPS (typical navigation)
+        if len(text) > 20:
+            alpha_chars = [c for c in text if c.isalpha()]
+            if alpha_chars:
+                capital_ratio = sum(1 for c in alpha_chars if c.isupper()) / len(alpha_chars)
+                if capital_ratio > 0.8:  # More than 80% caps
+                    continue
+        
+        # Skip chunks with too much whitespace/repetition (e.g., menu lists)
+        lines = text.split('\n')
+        avg_line_length = sum(len(line.strip()) for line in lines) / len(lines) if lines else 0
+        if avg_line_length < 10 and len(lines) > 5:  # Many short lines = likely nav
+            continue
+        
+        # Skip chunks that are mostly navigation keywords
+        nav_keywords = ['home', 'blog', 'docs', 'guide', 'documentation', 'showcase', 'partners', 'contact', 'search']
+        word_count = len(text.split())
+        nav_word_count = sum(1 for word in text.lower().split() if any(kw in word for kw in nav_keywords))
+        if word_count > 0 and nav_word_count / word_count > 0.5:  # More than 50% nav words
+            if word_count < 30:  # Only filter if short
+                continue
+        
+        filtered_chunks.append(chunk)
+    
+    return filtered_chunks
 
 def extract_language(code_block: str) -> str:
     """Extract language from code fence."""

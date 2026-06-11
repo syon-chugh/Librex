@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import toast from "react-hot-toast"
 import { indexLibrary, getIndexStatus } from "../api/client"
 
 export default function AddLibraryModal({ onClose, onSuccess }) {
@@ -6,12 +7,13 @@ export default function AddLibraryModal({ onClose, onSuccess }) {
   const [libraryName, setLibraryName] = useState("")
   const [status, setStatus] = useState("idle")
   const [jobId, setJobId] = useState(null)
-  const [progress, setProgress] = useState({})
+  const [progress, setProgress] = useState({ current: 0, total: 100 })
+  const [error, setError] = useState(null)
 
   const extractLibraryName = (urlStr) => {
     try {
       const hostname = new URL(urlStr).hostname
-      return hostname.split(".")[0].toLowerCase()
+      return hostname.replace("www.", "").split(".")[0].toLowerCase()
     } catch {
       return ""
     }
@@ -24,197 +26,140 @@ export default function AddLibraryModal({ onClose, onSuccess }) {
   }
 
   const handleSubmit = async () => {
-    if (!url || !libraryName) return
+    if (!url || !libraryName) {
+      toast.error("Please enter a valid URL and library name")
+      return
+    }
 
     try {
-      setStatus("indexing")
-      const result = await indexLibrary(url, libraryName)
-      setJobId(result.job_id)
-
-      // Poll for status
-      const pollInterval = setInterval(async () => {
-        const statusResult = await getIndexStatus(result.job_id)
-        setProgress(statusResult)
-
-        if (statusResult.status === "done") {
-          clearInterval(pollInterval)
-          setStatus("done")
-          setTimeout(() => {
-            onSuccess()
-            onClose()
-          }, 1000)
-        } else if (statusResult.status === "error") {
-          clearInterval(pollInterval)
-          setStatus("error")
-        }
-      }, 2000)
+      setStatus("scraping")
+      setError(null)
+      const response = await indexLibrary(url, libraryName)
+      setJobId(response.job_id)
+      pollStatus(response.job_id)
     } catch (err) {
+      setError(err.message || "Failed to start indexing")
+      toast.error("Failed to start indexing")
       setStatus("error")
-      console.error("Error:", err)
     }
   }
 
-  const progressSteps = [
-    { key: "scraping", label: "Scraping pages..." },
-    { key: "chunking", label: "Chunking content..." },
-    { key: "embedding", label: "Embedding chunks..." },
-    { key: "done", label: "Done ✓" }
-  ]
+  const pollStatus = (jid) => {
+    const interval = setInterval(async () => {
+      try {
+        const statusData = await getIndexStatus(jid)
+        setStatus(statusData.status)
+        setProgress({
+          current: statusData.chunks_stored || 0,
+          total: 100
+        })
+
+        if (statusData.status === "done") {
+          clearInterval(interval)
+          toast.success("Library indexed successfully!")
+          setTimeout(() => {
+            onSuccess()
+          }, 800)
+        } else if (statusData.status === "error") {
+          clearInterval(interval)
+          setError(statusData.error || "Indexing failed")
+          setStatus("error")
+          toast.error("Indexing failed")
+        }
+      } catch (err) {
+        clearInterval(interval)
+        setError("Failed to check status")
+        setStatus("error")
+      }
+    }, 1500)
+  }
+
+  const steps = ["Scraping", "Chunking", "Embedding", "Done"]
+  const stepMap = {
+    idle: -1,
+    scraping: 0,
+    chunking: 1,
+    embedding: 2,
+    done: 3,
+    error: -1
+  }
+  const currentStep = stepMap[status] ?? -1
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 1000
-      }}
-    >
+    <div className="modal-overlay" onClick={onClose}>
       <div
-        style={{
-          backgroundColor: "white",
-          borderRadius: "8px",
-          padding: "32px",
-          maxWidth: "400px",
-          width: "90%"
-        }}
+        className="modal"
+        onClick={(e) => e.stopPropagation()}
       >
-        <h2 style={{ marginTop: 0, marginBottom: "16px" }}>Add Library</h2>
+        <h2 className="modal-title">Index a Library</h2>
+        <p className="modal-subtitle">Paste the documentation URL below</p>
 
-        {status === "idle" && (
-          <>
+        {error && (
+          <div style={{
+            background: "rgba(239, 68, 68, 0.1)",
+            border: "1px solid rgba(239, 68, 68, 0.3)",
+            borderRadius: "var(--radius-md)",
+            padding: "var(--spacing-3) var(--spacing-4)",
+            marginBottom: "var(--spacing-4)",
+            color: "#ef4444",
+            fontSize: "var(--text-sm)"
+          }}>
+            {error}
+          </div>
+        )}
+
+        {status === "idle" || status === "error" ? (
+          <div className="input-group">
             <input
               type="url"
-              placeholder="Paste docs URL"
+              placeholder="https://docs.example.com"
               value={url}
               onChange={handleUrlChange}
-              style={{
-                width: "100%",
-                padding: "10px",
-                marginBottom: "12px",
-                border: "1px solid #ddd",
-                borderRadius: "6px",
-                fontSize: "14px",
-                boxSizing: "border-box"
-              }}
+              className="input"
             />
-
             <input
               type="text"
-              placeholder="Library name"
+              placeholder="Library name (e.g., react, fastapi)"
               value={libraryName}
               onChange={(e) => setLibraryName(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "10px",
-                marginBottom: "16px",
-                border: "1px solid #ddd",
-                borderRadius: "6px",
-                fontSize: "14px",
-                boxSizing: "border-box"
-              }}
+              className="input"
             />
-
-            <div style={{ display: "flex", gap: "8px" }}>
-              <button
-                onClick={onClose}
-                style={{
-                  flex: 1,
-                  padding: "10px",
-                  backgroundColor: "#ddd",
-                  border: "none",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  fontSize: "14px"
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={!url || !libraryName}
-                style={{
-                  flex: 1,
-                  padding: "10px",
-                  backgroundColor: url && libraryName ? "#534AB7" : "#ccc",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "6px",
-                  cursor: url && libraryName ? "pointer" : "not-allowed",
-                  fontSize: "14px",
-                  fontWeight: "600"
-                }}
-              >
-                Index Library
-              </button>
-            </div>
-          </>
-        )}
-
-        {status === "indexing" && (
-          <div>
-            {progressSteps.map((step) => {
-              const isActive = progress.status === step.key || (progress.status === "done" && step.key === "done")
-              const isDone = progress.status === "done" || progressSteps.indexOf(step) < progressSteps.findIndex(s => s.key === progress.status)
-
-              return (
-                <div
-                  key={step.key}
-                  style={{
-                    padding: "10px",
-                    marginBottom: "8px",
-                    backgroundColor: isActive ? "#f0f0f0" : "transparent",
-                    borderRadius: "4px",
-                    color: isDone ? "#0F6E56" : isActive ? "#534AB7" : "#ccc"
-                  }}
-                >
-                  {isDone ? "✓" : isActive ? "○" : "○"} {step.label}
-                </div>
-              )
-            })}
-
-            {progress.pages_done > 0 && (
-              <div style={{ marginTop: "16px", fontSize: "12px", color: "#888" }}>
-                Pages: {progress.pages_done} | Chunks: {progress.chunks_stored}
-              </div>
-            )}
-          </div>
-        )}
-
-        {status === "done" && (
-          <div style={{ textAlign: "center", color: "#0F6E56" }}>
-            <div style={{ fontSize: "32px", marginBottom: "8px" }}>✓</div>
-            <div>Library indexed successfully!</div>
-          </div>
-        )}
-
-        {status === "error" && (
-          <div style={{ textAlign: "center", color: "#cc0000" }}>
-            <div style={{ marginBottom: "16px" }}>Error during indexing</div>
             <button
-              onClick={() => {
-                setStatus("idle")
-                setJobId(null)
-                setProgress({})
-              }}
-              style={{
-                padding: "10px 20px",
-                backgroundColor: "#cc0000",
-                color: "white",
-                border: "none",
-                borderRadius: "6px",
-                cursor: "pointer"
-              }}
+              onClick={handleSubmit}
+              disabled={!url || !libraryName}
+              className="primary-btn"
             >
-              Try Again
+              Start Indexing
             </button>
           </div>
+        ) : (
+          <>
+            <div className="progress-steps">
+              {steps.map((step, idx) => {
+                const isDone = idx < currentStep
+                const isActive = idx === currentStep
+
+                return (
+                  <div key={idx} className={`step ${isDone ? 'done' : ''} ${isActive ? 'active' : ''}`}>
+                    <div className="step-circle">
+                      {isDone ? '✓' : String(idx + 1).padStart(2, '0')}
+                    </div>
+                    <div className="step-label">{step}</div>
+                  </div>
+                )
+              })}
+            </div>
+            <p style={{
+              textAlign: "center",
+              fontSize: "var(--text-sm)",
+              color: "var(--muted-foreground)",
+              marginTop: "var(--spacing-4)"
+            }}>
+              {progress.current > 0 && `${progress.current} chunks stored`}
+              {progress.current === 0 && status !== "done" && "Processing..."}
+              {status === "done" && "Complete! ✓"}
+            </p>
+          </>
         )}
       </div>
     </div>

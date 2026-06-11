@@ -4,18 +4,44 @@ import { useChat } from "./hooks/useChat"
 import Sidebar from "./components/Sidebar"
 import ChatPanel from "./components/ChatPanel"
 import AddLibraryModal from "./components/AddLibraryModal"
+import { Toaster } from "react-hot-toast"
 
 function App() {
   const { libraries, loading, refetch } = useLibraries()
-  const { messages, loading: chatLoading, sendMessage, clearChat } = useChat()
+  const { messages, loading: chatLoading, sendMessage, clearChat, getLibraryHistory } = useChat()
   const [activeLibrary, setActiveLibrary] = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark')
 
+  // Apply theme
+  useEffect(() => {
+    if (theme === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light')
+    } else {
+      document.documentElement.removeAttribute('data-theme')
+    }
+    localStorage.setItem('theme', theme)
+  }, [theme])
+
+  // Set active library
   useEffect(() => {
     if (libraries.length > 0 && !activeLibrary) {
       setActiveLibrary(libraries[0].name)
     }
   }, [libraries, activeLibrary])
+
+  // Keyboard shortcut: Cmd/Ctrl+K to focus composer
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        const textarea = document.querySelector('.composer-textarea')
+        if (textarea) textarea.focus()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   const handleSelectLibrary = (libName) => {
     setActiveLibrary(libName)
@@ -24,39 +50,65 @@ function App() {
 
   const handleAddSuccess = () => {
     refetch()
+    setShowAddModal(false)
+  }
+
+  const toggleTheme = () => {
+    setTheme(t => t === 'dark' ? 'light' : 'dark')
   }
 
   if (loading) {
     return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100vh"
-        }}
-      >
-        <div>Loading libraries...</div>
+      <div className="app">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontSize: "1rem", color: "var(--muted-foreground)" }}>
+          Loading libraries...
+        </div>
       </div>
     )
   }
 
   return (
-    <div style={{ display: "flex", height: "100vh" }}>
-      <Sidebar
-        libraries={libraries}
-        activeLibrary={activeLibrary}
-        onSelect={handleSelectLibrary}
-        onAddClick={() => setShowAddModal(true)}
-      />
+    <div className="app">
+      {/* Editorial Codex Header */}
+      <div className="app-header">
+        <div className="logo-section">
+          <div className="logo">L</div>
+          <div className="wordmark">Librex</div>
+          <div className="tag">codex v1</div>
+        </div>
+        <div className="header-right">
+          <div className="shortcut-chip">⌘K</div>
+          <button 
+            className="theme-toggle" 
+            onClick={toggleTheme} 
+            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          >
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
+        </div>
+      </div>
 
-      <ChatPanel
-        activeLibrary={activeLibrary}
-        messages={messages}
-        loading={chatLoading}
-        onSendMessage={sendMessage}
-      />
+      {/* Main Container */}
+      <div className="app-container">
+        {/* Sidebar */}
+        <Sidebar
+          libraries={libraries}
+          activeLibrary={activeLibrary}
+          onSelect={handleSelectLibrary}
+          onAddClick={() => setShowAddModal(true)}
+        />
 
+        {/* Chat Area */}
+        <ChatPanel
+          activeLibrary={activeLibrary}
+          libraries={libraries}
+          messages={messages}
+          loading={chatLoading}
+          onSendMessage={sendMessage}
+        />
+      </div>
+
+      {/* Add Library Modal */}
       {showAddModal && (
         <AddLibraryModal
           onClose={() => setShowAddModal(false)}
@@ -64,37 +116,8 @@ function App() {
         />
       )}
 
-      <style>{`
-        @keyframes blink {
-          0%, 20%, 50%, 80%, 100% {
-            opacity: 1;
-          }
-          40% {
-            opacity: 0.5;
-          }
-          60% {
-            opacity: 0.7;
-          }
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-
-        body {
-          margin: 0;
-          padding: 0;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-            'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-            sans-serif;
-          -webkit-font-smoothing: antialiased;
-          -moz-osx-font-smoothing: grayscale;
-        }
-
-        #root {
-          height: 100%;
-        }
-      `}</style>
+      {/* Toast Notifications */}
+      <Toaster position="bottom-right" />
     </div>
   )
 }

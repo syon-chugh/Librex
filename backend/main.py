@@ -74,9 +74,16 @@ async def ask(request: AskRequest):
             sources=sources,
             library=request.library,
             chunks_used=result["chunks_used"],
+            confidence_score=result["confidence_score"],
             confidence=result["confidence"]
         )
     except Exception as e:
+        print(f"\n❌ ERROR in /ask endpoint:")
+        print(f"   Question: {request.question}")
+        print(f"   Library: {request.library}")
+        print(f"   Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/index")

@@ -1,82 +1,66 @@
+import { useState } from "react"
+import ReactMarkdown from "react-markdown"
 import CodeBlock from "./CodeBlock"
 import SourcesPanel from "./SourcesPanel"
 
 export default function MessageBubble({ message }) {
   const isUser = message.role === "user"
 
-  // Parse code blocks from content
-  const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g
-  const parts = []
-  let lastIndex = 0
-
-  let match
-  while ((match = codeBlockRegex.exec(message.content)) !== null) {
-    // Add text before code block
-    if (match.index > lastIndex) {
-      parts.push({
-        type: "text",
-        content: message.content.substring(lastIndex, match.index)
-      })
-    }
-
-    // Add code block
-    parts.push({
-      type: "code",
-      language: match[1] || "javascript",
-      content: match[2].trim()
-    })
-
-    lastIndex = match.index + match[0].length
-  }
-
-  // Add remaining text
-  if (lastIndex < message.content.length) {
-    parts.push({
-      type: "text",
-      content: message.content.substring(lastIndex)
-    })
-  }
-
-  // If no code blocks found, treat entire message as text
-  if (parts.length === 0) {
-    parts.push({ type: "text", content: message.content })
-  }
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: isUser ? "flex-end" : "flex-start",
-        marginBottom: "12px",
-        padding: "0 12px"
-      }}
-    >
-      <div
-        style={{
-          maxWidth: isUser ? "70%" : "100%",
-          backgroundColor: isUser ? "#534AB7" : "#f0f0f0",
-          color: isUser ? "white" : "black",
-          padding: "12px 16px",
-          borderRadius: "8px",
-          wordWrap: "break-word"
-        }}
-      >
-        {parts.map((part, idx) =>
-          part.type === "text" ? (
-            <p key={idx} style={{ whiteSpace: "pre-wrap", margin: 0 }}>
-              {part.content}
-            </p>
-          ) : (
-            <CodeBlock key={idx} code={part.content} language={part.language} />
-          )
-        )}
-
-        {message.sources && message.sources.length > 0 && (
-          <div style={{ marginTop: "12px" }}>
-            <SourcesPanel sources={message.sources} />
-          </div>
-        )}
+  if (isUser) {
+    return (
+      <div className="message user">
+        <div className="message-label">You · {message.originalQuestion || message.content.substring(0, 20)}</div>
+        <div className="message-content">{message.content}</div>
       </div>
+    )
+  }
+
+  // Assistant message
+  return (
+    <div className="message assistant">
+      <div className="message-label">Librex · response</div>
+      
+      <div className="message-content">
+        <ReactMarkdown
+          components={{
+            code({ node, inline, className, children, ...props }) {
+              const match = /language-(\w+)/.exec(className || '')
+              return !inline ? (
+                <CodeBlock
+                  code={String(children).replace(/\n$/, '')}
+                  language={match ? match[1] : 'text'}
+                />
+              ) : (
+                <code style={{ 
+                  fontFamily: 'var(--font-mono)', 
+                  fontSize: '0.9em', 
+                  background: 'var(--surface-elevated)', 
+                  padding: '2px 6px', 
+                  borderRadius: '3px', 
+                  color: 'var(--brand)' 
+                }} {...props}>
+                  {children}
+                </code>
+              )
+            },
+            p: ({ children }) => <p style={{ marginBottom: 'var(--spacing-3)', lineHeight: '1.75' }}>{children}</p>,
+            ul: ({ children }) => <ul style={{ paddingLeft: '20px', marginBottom: 'var(--spacing-3)' }}>{children}</ul>,
+            ol: ({ children }) => <ol style={{ paddingLeft: '20px', marginBottom: 'var(--spacing-3)' }}>{children}</ol>,
+            li: ({ children }) => <li style={{ marginBottom: 'var(--spacing-1)' }}>{children}</li>,
+            strong: ({ children }) => <strong style={{ fontWeight: '600' }}>{children}</strong>,
+            em: ({ children }) => <em style={{ fontStyle: 'italic' }}>{children}</em>,
+            h1: ({ children }) => <h1 style={{ fontSize: '1.5em', fontWeight: '600', marginTop: 'var(--spacing-4)', marginBottom: 'var(--spacing-2)' }}>{children}</h1>,
+            h2: ({ children }) => <h2 style={{ fontSize: '1.25em', fontWeight: '600', marginTop: 'var(--spacing-3)', marginBottom: 'var(--spacing-2)' }}>{children}</h2>,
+            h3: ({ children }) => <h3 style={{ fontSize: '1.1em', fontWeight: '600', marginTop: 'var(--spacing-3)', marginBottom: 'var(--spacing-1)' }}>{children}</h3>,
+          }}
+        >
+          {message.content}
+        </ReactMarkdown>
+      </div>
+
+      {message.sources && message.sources.length > 0 && (
+        <SourcesPanel sources={message.sources} confidence={message.confidenceScore} />
+      )}
     </div>
   )
 }

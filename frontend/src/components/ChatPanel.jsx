@@ -1,7 +1,25 @@
 import { useRef, useEffect, useState } from "react"
 import MessageBubble from "./MessageBubble"
 
-export default function ChatPanel({ activeLibrary, messages, loading, onSendMessage }) {
+const EXAMPLES = {
+  react: [
+    "How do I use useEffect hooks?",
+    "What is the difference between state and props?",
+    "Show me a custom hook example"
+  ],
+  fastapi: [
+    "How do I add authentication to endpoints?",
+    "How do I handle file uploads?",
+    "Show me CORS middleware setup"
+  ],
+  default: [
+    "Give me an overview of this documentation",
+    "What are the core concepts?",
+    "Show me a basic usage example"
+  ]
+}
+
+export default function ChatPanel({ activeLibrary, libraries, messages, loading, onSendMessage }) {
   const [input, setInput] = useState("")
   const messagesEndRef = useRef(null)
 
@@ -27,71 +45,54 @@ export default function ChatPanel({ activeLibrary, messages, loading, onSendMess
     }
   }
 
-  const EXAMPLE_QUESTIONS = [
-    "How do I create a component?",
-    "Show me an example of hooks",
-    "What's the best practice for..."
-  ]
+  if (!activeLibrary) {
+    return (
+      <div className="chat-area">
+        <div className="empty-state" style={{ paddingTop: "20vh" }}>
+          <h1 className="empty-state-title" style={{ fontFamily: "var(--font-serif)" }}>
+            Select a library to begin
+          </h1>
+          <p className="empty-state-subtitle">
+            Choose from your indexed libraries in the sidebar
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  const examples = EXAMPLES[activeLibrary] || EXAMPLES.default
+  const libIndex = libraries.findIndex(l => l.name === activeLibrary)
+  const libNumber = String(libIndex + 1).padStart(2, '0')
+  const libCount = libraries[libIndex]?.count || 0
 
   return (
-    <div
-      style={{
-        flex: 1,
-        display: "flex",
-        flexDirection: "column",
-        height: "100vh"
-      }}
-    >
-      {/* Header */}
-      <div
-        style={{
-          padding: "16px",
-          borderBottom: "1px solid #ddd",
-          backgroundColor: "#f8f9fa"
-        }}
-      >
-        {activeLibrary ? (
-          <div>
-            <h1 style={{ margin: "0 0 4px 0", fontSize: "20px", textTransform: "capitalize" }}>
-              {activeLibrary}
-            </h1>
-            <p style={{ margin: 0, fontSize: "12px", color: "#888" }}>
-              Ask anything about {activeLibrary}
-            </p>
-          </div>
-        ) : (
-          <div style={{ color: "#888" }}>Select a library to start</div>
-        )}
+    <div className="chat-area">
+      {/* Sub-header */}
+      <div className="chat-subheader">
+        <span>{libNumber} / {activeLibrary}</span>
+        <span>·</span>
+        <span>{libCount} chunks indexed</span>
+        {messages.length > 0 && <div className="live-dot"></div>}
       </div>
 
-      {/* Messages */}
-      <div
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: "16px"
-        }}
-      >
-        {messages.length === 0 && activeLibrary ? (
-          <div style={{ textAlign: "center", marginTop: "60px" }}>
-            <h2 style={{ fontSize: "24px", marginBottom: "24px" }}>
-              Ask anything about {activeLibrary}
+      {/* Messages Area */}
+      <div className="messages">
+        {messages.length === 0 ? (
+          <div className="empty-state">
+            <h2 className="empty-state-title">
+              Ask anything about <em style={{ fontStyle: "italic", fontFamily: "var(--font-serif)" }}>{activeLibrary}</em>
             </h2>
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxWidth: "400px", margin: "0 auto" }}>
-              {EXAMPLE_QUESTIONS.map((q, idx) => (
+            <p className="empty-state-subtitle">
+              Get answers grounded in the official documentation
+            </p>
+            <div className="example-questions">
+              {examples.map((q, i) => (
                 <button
-                  key={idx}
-                  onClick={() => onSendMessage(q, activeLibrary)}
-                  style={{
-                    padding: "12px",
-                    backgroundColor: "#f0f0f0",
-                    border: "1px solid #ddd",
-                    borderRadius: "6px",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                    textAlign: "left"
-                  }}
+                  key={i}
+                  className="question-chip"
+                  onClick={() => setInput(q)}
                 >
+                  <span className="question-number">{String(i + 1).padStart(2, '0')}</span>
                   {q}
                 </button>
               ))}
@@ -100,11 +101,20 @@ export default function ChatPanel({ activeLibrary, messages, loading, onSendMess
         ) : (
           <>
             {messages.map((msg) => (
-              <MessageBubble key={msg.id} message={msg} />
+              <div key={msg.id} className="message">
+                <MessageBubble message={msg} />
+              </div>
             ))}
             {loading && (
-              <div style={{ padding: "12px", textAlign: "center", color: "#888" }}>
-                <span style={{ animation: "blink 1.4s infinite" }}>...</span>
+              <div className="message">
+                <div className="message-label">Librex · responding</div>
+                <div className="message-content">
+                  <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-3)" }}>
+                    <div className="skeleton" style={{ width: "100%" }}></div>
+                    <div className="skeleton" style={{ width: "95%" }}></div>
+                    <div className="skeleton" style={{ width: "70%" }}></div>
+                  </div>
+                </div>
               </div>
             )}
             <div ref={messagesEndRef} />
@@ -112,52 +122,27 @@ export default function ChatPanel({ activeLibrary, messages, loading, onSendMess
         )}
       </div>
 
-      {/* Input */}
-      {activeLibrary && (
-        <div
-          style={{
-            padding: "16px",
-            borderTop: "1px solid #ddd",
-            backgroundColor: "#f8f9fa",
-            display: "flex",
-            gap: "8px"
-          }}
-        >
+      {/* Terminal-style Composer */}
+      <div className="composer">
+        <span className="composer-prompt">&gt;</span>
+        <div className="composer-input-group">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Ask a question..."
-            style={{
-              flex: 1,
-              padding: "10px",
-              border: "1px solid #ddd",
-              borderRadius: "6px",
-              fontSize: "14px",
-              fontFamily: "inherit",
-              resize: "none",
-              minHeight: "40px",
-              maxHeight: "120px"
-            }}
+            placeholder="Ask about this documentation..."
+            className="composer-textarea"
           />
           <button
             onClick={handleSend}
             disabled={!input.trim() || loading}
-            style={{
-              padding: "10px 16px",
-              backgroundColor: input.trim() && !loading ? "#534AB7" : "#ccc",
-              color: "white",
-              border: "none",
-              borderRadius: "6px",
-              cursor: input.trim() && !loading ? "pointer" : "not-allowed",
-              fontSize: "14px",
-              fontWeight: "600"
-            }}
+            className="send-btn"
+            title="Send (Enter)"
           >
-            Send
+            ↑
           </button>
         </div>
-      )}
+      </div>
     </div>
   )
 }

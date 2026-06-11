@@ -1,75 +1,55 @@
 import { useState } from "react"
 
-export default function SourcesPanel({ sources }) {
+export default function SourcesPanel({ sources, confidence }) {
   const [expanded, setExpanded] = useState(false)
 
+  const getConfidenceColor = (score) => {
+    if (score >= 80) return { className: "confidence-high", label: "High" }
+    if (score >= 50) return { className: "confidence-medium", label: "Medium" }
+    return { className: "confidence-low", label: "Low" }
+  }
+
+  const conf = getConfidenceColor(confidence || 0)
+
   return (
-    <div style={{ fontSize: "12px" }}>
+    <div className="sources-panel">
       <button
         onClick={() => setExpanded(!expanded)}
-        style={{
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          color: "inherit",
-          textDecoration: "underline",
-          fontSize: "12px",
-          padding: 0
-        }}
+        className="sources-toggle"
       >
-        Sources ({sources.length})
+        <span className={`chevron ${expanded ? 'open' : ''}`}>▾</span>
+        <span style={{ fontSize: "var(--text-xs)", fontWeight: "600", textTransform: "uppercase" }}>
+          Sources
+        </span>
+        <span style={{ color: "var(--muted-foreground)" }}>({sources.length})</span>
+        {confidence !== undefined && (
+          <span className={`source-badge ${conf.className}`} style={{ marginLeft: "auto" }}>
+            {confidence}% {conf.label}
+          </span>
+        )}
       </button>
 
       {expanded && (
-        <div style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "8px" }}>
+        <div className="sources-grid">
           {sources.map((source, idx) => (
-            <div
+            <a
               key={idx}
-              style={{
-                padding: "8px",
-                backgroundColor: "rgba(255, 255, 255, 0.1)",
-                borderRadius: "4px",
-                fontSize: "11px"
-              }}
+              href={source.url || "#"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="source-card"
             >
-              <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
-                {source.title}
-              </div>
+              <div className="source-title">{source.title || "Untitled"}</div>
               {source.section && (
-                <div style={{ color: "rgba(0, 0, 0, 0.6)", marginBottom: "4px" }}>
-                  {source.section}
-                </div>
+                <div className="source-section">{source.section}</div>
               )}
-              <div style={{ color: "rgba(0, 0, 0, 0.5)", marginBottom: "6px" }}>
-                {source.chunk_text.substring(0, 120)}...
+              <div className="source-preview">
+                {source.chunk_text || source.preview || "No preview available"}
               </div>
-              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                <a
-                  href={source.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    color: "#0F6E56",
-                    textDecoration: "none",
-                    fontSize: "11px"
-                  }}
-                >
-                  ↗ Open source
-                </a>
-                <span
-                  style={{
-                    padding: "2px 6px",
-                    borderRadius: "3px",
-                    fontSize: "10px",
-                    backgroundColor: source.chunk_type === "code" ? "#FFA500" : "#185FA5",
-                    color: "white",
-                    fontWeight: "600"
-                  }}
-                >
-                  {source.chunk_type}
-                </span>
+              <div className="source-badge">
+                {source.chunk_type || "documentation"}
               </div>
-            </div>
+            </a>
           ))}
         </div>
       )}
