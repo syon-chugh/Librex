@@ -19,11 +19,8 @@ export default function CodeBlock({ code, language }) {
     <div className="code-block-wrapper">
       <div className="code-header">
         <span className="code-lang-label">{lang}</span>
-        <button
-          onClick={handleCopy}
-          className={`copy-btn ${copied ? 'copied' : ''}`}
-        >
-          {copied ? '✓ Copied' : 'Copy'}
+        <button onClick={handleCopy} className={`copy-btn ${copied ? "copied" : ""}`}>
+          {copied ? "✓ Copied" : "Copy code"}
         </button>
       </div>
       <div className="code-content">
@@ -32,13 +29,13 @@ export default function CodeBlock({ code, language }) {
           style={dark}
           customStyle={{
             margin: 0,
-            padding: '14px 16px',
-            background: 'transparent',
-            fontSize: '13px',
-            fontFamily: 'var(--font-mono)',
-            lineHeight: '1.65',
-            whiteSpace: 'pre',
-            overflowX: 'auto',
+            padding: "18px 20px",
+            background: "transparent",
+            fontSize: "13px",
+            fontFamily: "var(--font-mono)",
+            lineHeight: "1.72",
+            whiteSpace: "pre",
+            overflowX: "auto",
           }}
         >
           {code}

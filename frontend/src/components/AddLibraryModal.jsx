@@ -1,4 +1,4 @@
-﻿import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { indexLibrary, getIndexStatus } from "../api/client"
 
@@ -8,12 +8,28 @@ export default function AddLibraryModal({ onClose, onSuccess }) {
   const [status, setStatus] = useState("idle")
   const [progress, setProgress] = useState({ current: 0 })
   const [error, setError] = useState(null)
+  const intervalRef = useRef(null)
+
+  useEffect(() => {
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        onClose()
+      }
+    }
+
+    window.addEventListener("keydown", handleEscape)
+    return () => {
+      window.removeEventListener("keydown", handleEscape)
+      if (intervalRef.current) clearInterval(intervalRef.current)
+    }
+  }, [onClose])
 
   const handleSubmit = async () => {
     if (!libraryName.trim()) {
       toast.error("Please enter a library name")
       return
     }
+
     try {
       setStatus("fetching")
       setError(null)
@@ -27,23 +43,29 @@ export default function AddLibraryModal({ onClose, onSuccess }) {
   }
 
   const pollStatus = (jid) => {
-    const interval = setInterval(async () => {
+    if (intervalRef.current) clearInterval(intervalRef.current)
+
+    intervalRef.current = setInterval(async () => {
       try {
         const data = await getIndexStatus(jid)
         setStatus(data.status)
         setProgress({ current: data.chunks_stored || 0 })
+
         if (data.status === "done") {
-          clearInterval(interval)
+          clearInterval(intervalRef.current)
+          intervalRef.current = null
           toast.success("Library indexed successfully!")
           setTimeout(() => onSuccess(), 800)
         } else if (data.status === "error") {
-          clearInterval(interval)
+          clearInterval(intervalRef.current)
+          intervalRef.current = null
           setError(data.error || "Indexing failed")
           setStatus("error")
           toast.error("Indexing failed")
         }
       } catch {
-        clearInterval(interval)
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
         setError("Failed to check status")
         setStatus("error")
       }
@@ -58,15 +80,26 @@ export default function AddLibraryModal({ onClose, onSuccess }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h2 className="modal-title">Index a Library</h2>
-        <p className="modal-subtitle">Enter a library name to get started</p>
+        <button type="button" className="modal-close" onClick={onClose} aria-label="Close modal">
+          ✕
+        </button>
+
+        <div className="modal-eyebrow">Obsidian ingestion flow</div>
+        <h2 className="modal-title">Index a library</h2>
+        <p className="modal-subtitle">Create a polished, searchable doc space in seconds.</p>
 
         {error && (
-          <div style={{
-            background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)",
-            borderRadius: "var(--radius-md)", padding: "var(--spacing-3) var(--spacing-4)",
-            marginBottom: "var(--spacing-4)", color: "#ef4444", fontSize: "var(--text-sm)"
-          }}>
+          <div
+            style={{
+              background: "rgba(239,68,68,0.12)",
+              border: "1px solid rgba(248,113,113,0.28)",
+              borderRadius: "var(--radius-md)",
+              padding: "var(--spacing-3) var(--spacing-4)",
+              marginBottom: "var(--spacing-4)",
+              color: "#fca5a5",
+              fontSize: "var(--text-sm)",
+            }}
+          >
             {error}
           </div>
         )}
@@ -88,17 +121,14 @@ export default function AddLibraryModal({ onClose, onSuccess }) {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               className="input"
-              style={{ opacity: 0.7 }}
+              style={{ opacity: 0.82 }}
             />
             <p style={{ fontSize: "var(--text-xs)", color: "var(--muted-foreground)", margin: "-4px 0 8px" }}>
-              Docs are fetched automatically — react, nextjs, vite use llms.txt (best quality); others use Context7. URL is only needed as a last resort.
+              React, Next.js, and Vite prefer llms.txt for best quality. Most other libraries use Context7 automatically.
             </p>
-            <button
-              onClick={handleSubmit}
-              disabled={!libraryName.trim()}
-              className="primary-btn"
-            >
-              Start Indexing
+            <button onClick={handleSubmit} disabled={!libraryName.trim()} className="primary-btn">
+              <span>Start indexing</span>
+              <span aria-hidden="true">↗</span>
             </button>
           </div>
         ) : (
@@ -107,14 +137,16 @@ export default function AddLibraryModal({ onClose, onSuccess }) {
               {steps.map((step, idx) => {
                 const isDone = idx < currentStep
                 const isActive = idx === currentStep
+
                 return (
-                  <div key={idx} className={`step ${isDone ? "done" : ""} ${isActive ? "active" : ""}`}>
-                    <div className="step-circle">{isDone ? "+" : String(idx + 1).padStart(2, "0")}</div>
+                  <div key={step} className={`step ${isDone ? "done" : ""} ${isActive ? "active" : ""}`}>
+                    <div className="step-circle">{isDone ? "✓" : String(idx + 1).padStart(2, "0")}</div>
                     <div className="step-label">{step}</div>
                   </div>
                 )
               })}
             </div>
+
             <p style={{ textAlign: "center", fontSize: "var(--text-sm)", color: "var(--muted-foreground)", marginTop: "var(--spacing-4)" }}>
               {status === "done" ? "Complete!" : progress.current > 0 ? `${progress.current} chunks stored` : "Processing..."}
             </p>

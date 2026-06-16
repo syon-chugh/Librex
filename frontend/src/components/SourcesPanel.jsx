@@ -1,4 +1,14 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
+
+const getDomain = (url) => {
+  if (!url) return "docs"
+
+  try {
+    return new URL(url).hostname.replace(/^www\./, "")
+  } catch {
+    return "docs"
+  }
+}
 
 export default function SourcesPanel({ sources, confidence }) {
   const [expanded, setExpanded] = useState(false)
@@ -10,14 +20,12 @@ export default function SourcesPanel({ sources, confidence }) {
   }
 
   const conf = getConfidenceColor(confidence || 0)
+  const panelHeight = useMemo(() => `${sources.length * 180}px`, [sources.length])
 
   return (
     <div className="sources-panel">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="sources-toggle"
-      >
-        <span className={`chevron ${expanded ? 'open' : ''}`}>▾</span>
+      <button onClick={() => setExpanded(!expanded)} className="sources-toggle">
+        <span className={`chevron ${expanded ? "open" : ""}`}>▾</span>
         <span style={{ fontSize: "var(--text-xs)", fontWeight: "600", textTransform: "uppercase" }}>
           Sources
         </span>
@@ -29,30 +37,41 @@ export default function SourcesPanel({ sources, confidence }) {
         )}
       </button>
 
-      {expanded && (
-        <div className="sources-grid">
-          {sources.map((source, idx) => (
+      <div
+        className="sources-grid"
+        style={{
+          maxHeight: expanded ? panelHeight : "0px",
+          opacity: expanded ? 1 : 0,
+          marginTop: expanded ? "14px" : "0px",
+        }}
+      >
+        {sources.map((source, idx) => {
+          const domain = getDomain(source.url)
+
+          return (
             <a
-              key={idx}
+              key={`${source.url || source.title || "source"}-${idx}`}
               href={source.url || "#"}
               target="_blank"
               rel="noopener noreferrer"
               className="source-card"
             >
-              <div className="source-title">{source.title || "Untitled"}</div>
-              {source.section && (
-                <div className="source-section">{source.section}</div>
-              )}
-              <div className="source-preview">
-                {source.chunk_text || source.preview || "No preview available"}
+              <div className="source-card-top">
+                <div className="source-favicon" aria-hidden="true">
+                  {domain.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <div className="source-title">{source.title || "Untitled"}</div>
+                  <div className="source-domain">{domain}</div>
+                </div>
               </div>
-              <div className="source-badge">
-                {source.chunk_type || "documentation"}
-              </div>
+              {source.section && <div className="source-section">{source.section}</div>}
+              <div className="source-preview">{source.chunk_text || source.preview || "No preview available"}</div>
+              <div className="source-badge">{source.chunk_type || "documentation"}</div>
             </a>
-          ))}
-        </div>
-      )}
+          )
+        })}
+      </div>
     </div>
   )
 }
