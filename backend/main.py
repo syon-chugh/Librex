@@ -69,7 +69,7 @@ async def ask(request: AskRequest):
             for c in chunks
         ]
         
-        return AskResponse(
+        response_payload = AskResponse(
             answer=result["answer"],
             sources=sources,
             library=request.library,
@@ -77,6 +77,14 @@ async def ask(request: AskRequest):
             confidence_score=result["confidence_score"],
             confidence=result["confidence"]
         )
+        print(f"\n{'='*60}")
+        print(f"📤 RESPONSE SENT TO FRONTEND:")
+        print(f"{'='*60}")
+        print(f"   answer ({len(result['answer'])} chars): {result['answer']}")
+        print(f"   chunks_used: {result['chunks_used']}")
+        print(f"   confidence_score: {result['confidence_score']}")
+        print(f"{'='*60}\n")
+        return response_payload
     except Exception as e:
         print(f"\n❌ ERROR in /ask endpoint:")
         print(f"   Question: {request.question}")
@@ -108,15 +116,15 @@ async def index_library(request: IndexRequest):
     return {"job_id": job_id, "status": "started"}
 
 def run_ingestion(job_id: str, library_name: str, url: str):
-    """Background task: scrape, chunk, embed, and store docs."""
-    from scraper import scrape_docs
+    """Background task: fetch (llms.txt / Context7 / scraper), chunk, embed, and store docs."""
+    from fetcher import fetch_docs
     from chunker import chunk_document
     from embedder import embed_and_store
     
     try:
-        # Scraping
+        # Fetching (smart: llms.txt → Context7 → scraper fallback)
         jobs[job_id]["status"] = "scraping"
-        pages = scrape_docs(url, max_pages=100)
+        pages = fetch_docs(library_name, url, max_pages=100)
         jobs[job_id]["pages_done"] = len(pages)
 
         # Chunking
