@@ -2,92 +2,126 @@
 
 A RAG-powered documentation assistant that indexes library docs and answers developer questions with grounded, cited responses and syntax-highlighted code examples.
 
-Features
-- 🔍 Semantic search over indexed docs
-- 📚 Smart fetcher: llms.txt → Context7 → HTML scraper fallback
-- 💾 Local-first vector store (ChromaDB) with Ollama-based embeddings (nomic-embed-text)
-- 🎯 Cited sources and code-aware chunking
-- 🎨 Polished React + Vite frontend with premium "Obsidian" theme
+## Features
 
-Why Librex?
-Librex focuses on reliably ingesting and surfacing official library docs. Where available, it prefers llms.txt (clean markdown pages). When llms.txt isn't present (e.g., Tailwind), Librex queries Context7 (requires API key). Only when other options fail does it fall back to the HTML scraper.
+* 🔍 Semantic search over indexed docs
+* 📚 Smart fetcher: `llms.txt` → Context7 → HTML scraper fallback
+* 💾 Local-first vector store (ChromaDB) with Ollama-based embeddings (`nomic-embed-text`)
+* 🎯 Cited sources and code-aware chunking
+* 🎨 Polished React + Vite frontend with premium "Obsidian" theme
 
-Important: llms.txt support
-- Highest quality source when present (React, Next.js, Vite)
-- Not all sites publish llms.txt (Tailwind does not); fetcher will use Context7 in that case
+## Why Librex?
 
-Tech stack
-- Frontend: React + Vite
-- Backend: FastAPI (Python)
-- Vector DB: ChromaDB (persistent local folder: ./chroma_db)
-- Embeddings: nomic-embed-text via Ollama (localhost:11434)
-- Retrieval LLM: OpenAI GPT (gpt-4o-mini) used for answer generation and query rewriting
+Librex focuses on reliably ingesting and surfacing official library docs. Where available, it prefers `llms.txt` (clean markdown pages). When `llms.txt` isn't present (e.g., Tailwind), Librex queries Context7 (requires API key). Only when other options fail does it fall back to the HTML scraper.
 
-Prerequisites
-- Python 3.10+
-- Node.js 18+
-- Ollama (for nomic-embed-text) — optional if using remote embeddings
+### Important: `llms.txt` support
 
-Environment (.env)
-Create backend/.env (do NOT commit). Useful variables:
-- OPENAI_API_KEY=...
-- CONTEXT7_API_KEY=...   # Context7 API key (optional but recommended for many docs)
-- OLLAMA_URL=http://localhost:11434
+* Highest quality source when present (React, Next.js, Vite)
+* Not all sites publish `llms.txt` (Tailwind does not); fetcher will use Context7 in that case
 
-Quickstart (development)
-1. Backend
-   cd backend
-   python -m venv venv
-   # Windows
-   venv\Scripts\activate
-   # macOS / Linux
-   # source venv/bin/activate
-   pip install -r requirements.txt
+## Tech Stack
 
-   # Start backend (dev)
-   uvicorn main:app --reload --port 8000
+* **Frontend:** React + Vite
+* **Backend:** FastAPI (Python)
+* **Vector DB:** ChromaDB (persistent local folder: `./chroma_db`)
+* **Embeddings:** `nomic-embed-text` via Ollama (`localhost:11434`)
+* **Retrieval LLM:** OpenAI GPT (`gpt-4o-mini`) used for answer generation and query rewriting
 
-2. Frontend
-   cd frontend
-   npm install
-   npm run dev
-   # Dev server typically available at http://localhost:5173 (or next free port)
+## Prerequisites
 
-Indexing a library (CLI)
-- Preferred approach: from the frontend, open "Index new library" and provide the library name (URL optional).
-- CLI example (backend):
-  cd backend
-  python ingest.py --library react --url https://react.dev --max-pages 200
+* Python 3.10+
+* Node.js 18+
+* Ollama (for `nomic-embed-text`) — *optional if using remote embeddings*
 
-Embedding notes
-- Embeddings and ChromaDB have practical batch limits. Librex uses safe defaults:
-  - Embed batch (tokens): ~4000 tokens
-  - ChromaDB add batch: 500 items
-- The embedder truncates long texts and retries failed batches to avoid bulk failures.
+## Environment (`.env`)
 
-Context7 integration
-- When llms.txt is unavailable, Librex queries Context7 (if CONTEXT7_API_KEY provided)
-- Context7 fetcher performs multiple topic queries and deduplicates snippets to improve coverage
+Create `backend/.env` (do **NOT** commit). Useful variables:
 
-Frontend notes
-- Library name is the primary input when indexing (URL only needed as fallback)
-- Example queries are generic and work across libraries
-- Premium dark theme applied (Obsidian-inspired); toggle light/dark in header
+```env
+OPENAI_API_KEY=...
+CONTEXT7_API_KEY=...   # Context7 API key (optional but recommended for many docs)
+OLLAMA_URL=http://localhost:11434
 
-Troubleshooting
-- "Tailwind returns garbage chunks": Tailwind doesn't publish llms.txt; reindexing via Context7 or providing a docs URL will help. Use the UI "Index new library" and check indexing status.
-- Embedding errors (batch size): ensure Ollama is running and nomic-embed-text is pulled; Librex will fall back to single-item retries.
+```
 
-Development tips
-- To re-index a library and replace existing data, call the `/index` endpoint (UI) or run the ingest CLI; embedder now deletes old collections before storing new chunks.
-- To re-run the React ingestion locally:
-  cd backend
-  python -X utf8 -c "from fetcher import fetch_docs; from chunker import chunk_document; from embedder import embed_and_store; pages = fetch_docs('react','https://react.dev'); chunks = []; ..."
+## Quickstart (Development)
 
-Project structure
-- backend/: FastAPI app, fetcher, chunker, embedder, retriever, llm
-- frontend/: React app (components in src/components)
+### 1. Backend
 
-License
-MIT
+```bash
+cd backend
+python -m venv venv
 
+# Windows
+venv\Scripts\activate
+# macOS / Linux
+# source venv/bin/activate
+
+pip install -r requirements.txt
+
+# Start backend (dev)
+uvicorn main:app --reload --port 8000
+
+```
+
+### 2. Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+# Dev server typically available at http://localhost:5173 (or next free port)
+
+```
+
+## Indexing a Library (CLI)
+
+* **Preferred approach:** From the frontend, open "Index new library" and provide the library name (URL optional).
+* **CLI example (backend):**
+
+```bash
+cd backend
+python ingest.py --library react --url https://react.dev --max-pages 200
+
+```
+
+## Embedding Notes
+
+* Embeddings and ChromaDB have practical batch limits. Librex uses safe defaults:
+* Embed batch (tokens): ~4000 tokens
+* ChromaDB add batch: 500 items
+
+
+* The embedder truncates long texts and retries failed batches to avoid bulk failures.
+
+## Context7 Integration
+
+* When `llms.txt` is unavailable, Librex queries Context7 (if `CONTEXT7_API_KEY` is provided).
+* Context7 fetcher performs multiple topic queries and deduplicates snippets to improve coverage.
+
+## Frontend Notes
+
+* Library name is the primary input when indexing (URL only needed as fallback).
+* Example queries are generic and work across libraries.
+* Premium dark theme applied (Obsidian-inspired); toggle light/dark in header.
+
+## Troubleshooting
+
+* **"Tailwind returns garbage chunks":** Tailwind doesn't publish `llms.txt`; reindexing via Context7 or providing a docs URL will help. Use the UI "Index new library" and check indexing status.
+* **Embedding errors (batch size):** Ensure Ollama is running and `nomic-embed-text` is pulled; Librex will fall back to single-item retries.
+
+## Development Tips
+
+* To re-index a library and replace existing data, call the `/index` endpoint (UI) or run the ingest CLI; the embedder now deletes old collections before storing new chunks.
+* To re-run the React ingestion locally:
+
+```bash
+cd backend
+python -X utf8 -c "from fetcher import fetch_docs; from chunker import chunk_document; from embedder import embed_and_store; pages = fetch_docs('react','https://react.dev'); chunks = []; ..."
+
+```
+
+## Project Structure
+
+* `backend/`: FastAPI app, fetcher, chunker, embedder, retriever, llm
+* `frontend/`: React app (components in `src/components`)
