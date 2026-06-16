@@ -1,23 +1,11 @@
 import { useRef, useEffect, useState } from "react"
 import MessageBubble from "./MessageBubble"
 
-const EXAMPLES = {
-  react: [
-    "How do I use useEffect hooks?",
-    "What is the difference between state and props?",
-    "Show me a custom hook example"
-  ],
-  fastapi: [
-    "How do I add authentication to endpoints?",
-    "How do I handle file uploads?",
-    "Show me CORS middleware setup"
-  ],
-  default: [
-    "Give me an overview of this documentation",
-    "What are the core concepts?",
-    "Show me a basic usage example"
-  ]
-}
+const EXAMPLES = [
+  "What are the core concepts?",
+  "Give me an overview of this library",
+  "Show me a basic usage example",
+]
 
 export default function ChatPanel({ activeLibrary, libraries, messages, loading, onSendMessage }) {
   const [input, setInput] = useState("")
@@ -60,7 +48,7 @@ export default function ChatPanel({ activeLibrary, libraries, messages, loading,
     )
   }
 
-  const examples = EXAMPLES[activeLibrary] || EXAMPLES.default
+  const examples = EXAMPLES
   const libIndex = libraries.findIndex(l => l.name === activeLibrary)
   const libNumber = String(libIndex + 1).padStart(2, '0')
   const libCount = libraries[libIndex]?.count || 0

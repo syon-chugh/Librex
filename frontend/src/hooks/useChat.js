@@ -49,6 +49,12 @@ export function useChat() {
 
     try {
       const data = await askQuestion(question, library)
+      console.log("=== RESPONSE FROM BACKEND ===")
+      console.log("answer:", data.answer)
+      console.log("chunks_used:", data.chunks_used)
+      console.log("confidence_score:", data.confidence_score)
+      console.log("full data:", data)
+      console.log("=============================")
       const assistantMsg = {
         id: Date.now() + 1,
         role: "assistant",

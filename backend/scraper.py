@@ -21,10 +21,14 @@ def scrape_docs(root_url: str, max_pages: int = 100) -> list[dict]:
     
     # CSS selectors for nav/header/footer elements to remove
     REMOVE_SELECTORS = [
-        'nav', 'header', 'footer',
+        'nav', 'header', 'footer', 'aside',
         '.navbar', '.navigation', '.header', '.footer',
-        '.sidebar', '.toc', '[role="navigation"]',
+        '.sidebar', '.toc', '.side-nav', '.sidenav',
+        '[role="navigation"]', '[role="banner"]', '[role="complementary"]',
         '.breadcrumb', '.search',
+        '[class*="sidebar"]', '[class*="Sidebar"]',
+        '[class*="nav-"]', '[class*="NavBar"]',
+        '[class*="TableOfContents"]', '[class*="toc"]',
         'script', 'style', 'noscript',
     ]
     

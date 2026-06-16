@@ -24,8 +24,8 @@ class AskResponse(BaseModel):
     confidence: float  # average confidence of top chunks
 
 class IndexRequest(BaseModel):
-    url: str
     library_name: str
+    url: Optional[str] = ""  # optional: only needed for scraper fallback
 
 class IndexStatusResponse(BaseModel):
     job_id: str
