@@ -47,6 +47,7 @@ def retrieve(query: str, library_name: str, n_results: int = 5) -> list[dict]:
             metadata_keys = list(chunk['metadata'].keys()) if chunk['metadata'] else []
             print(f"      Chunk {i+1}: dist={chunk['distance']:.4f}, text_len={len(chunk['text'])}, text='{text_preview}...'")
             print(f"               metadata_keys={metadata_keys}")
+        return chunks
     except Exception as e:
         print(f"\n❌ ERROR in retrieve():")
         print(f"   Library: {library_name}")
@@ -55,30 +56,3 @@ def retrieve(query: str, library_name: str, n_results: int = 5) -> list[dict]:
         import traceback
         traceback.print_exc()
         return []
-    """
-    Rewrite query for better retrieval, embed with nomic-embed-text,
-    and retrieve top n_results chunks from ChromaDB.
-    """
-    # Rewrite query to be more search-friendly
-    rewritten_query = rewrite_query(query, library_name)
-    
-    # Embed rewritten query using same model as ingestion
-    query_embedding = embed_texts([rewritten_query])[0]
-    
-    collection = get_or_create_collection(library_name)
-    
-    results = collection.query(
-        query_embeddings=[query_embedding],
-        n_results=n_results,
-        include=["documents", "metadatas", "distances"]
-    )
-    
-    chunks = []
-    for i in range(len(results["documents"][0])):
-        chunks.append({
-            "text": results["documents"][0][i],
-            "metadata": results["metadatas"][0][i],
-            "distance": results["distances"][0][i]
-        })
-    
-    return chunks

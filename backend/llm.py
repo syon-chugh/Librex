@@ -88,7 +88,11 @@ Developer question: {question}"""
         
         answer_text = response.choices[0].message.content
         print(f"      Answer text length: {len(answer_text)}")
-        print(f"      First 100 chars: {answer_text[:100]}...")
+        print(f"\n{'='*60}")
+        print(f"📄 FULL GPT OUTPUT:")
+        print(f"{'='*60}")
+        print(answer_text)
+        print(f"{'='*60}\n")
         
         if not answer_text or answer_text.strip() == "":
             print(f"   ⚠️  WARNING: Empty answer from LLM!")
@@ -125,41 +129,3 @@ Developer question: {question}"""
             "confidence_score": 0,
             "confidence": 0.0
         }
-        return {
-            "answer": "I couldn't find this in the indexed documentation. Try rephrasing or check the official docs directly.",
-            "chunks_used": 0,
-            "confidence_score": 0,
-            "confidence": 0.0
-        }
-    
-    context = build_context(chunks)
-    
-    user_message = f"""Documentation excerpts:
-
-{context}
-
----
-
-Developer question: {question}"""
-
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_message}
-        ],
-        temperature=0.1,
-        max_tokens=1000
-    )
-    
-    # Calculate average confidence from chunk distances
-    avg_distance = sum(c.get("distance", 1.0) for c in chunks) / len(chunks)
-    confidence = avg_distance  # store raw distance for confidence float field
-    confidence_score = max(0, min(100, (1 - avg_distance) * 100))  # convert to 0-100 int scale
-    
-    return {
-        "answer": response.choices[0].message.content,
-        "chunks_used": len(chunks),
-        "confidence_score": int(confidence_score),
-        "confidence": confidence
-    }
